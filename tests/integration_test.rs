@@ -1,6 +1,7 @@
 use async_trait::async_trait;
-use cucumber_rust::{event::*, Cucumber, EventHandler, Steps, World};
+use cucumber_rust::{event::*, t, Cucumber, EventHandler, Steps, World};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 #[derive(Default, Clone)]
 struct CustomEventHandler {
@@ -14,6 +15,7 @@ struct CustomEventHandlerState {
     any_step_unimplemented: bool,
     any_step_failures: bool,
     any_step_success: bool,
+    any_step_timeouts: bool,
 }
 impl EventHandler for CustomEventHandler {
     fn handle_event(&mut self, event: CucumberEvent) {
@@ -42,6 +44,12 @@ impl EventHandler for CustomEventHandler {
                 ),
             ) => {
                 state.any_step_failures = true;
+            }
+            CucumberEvent::Feature(
+                _feature,
+                FeatureEvent::Scenario(_scenario, ScenarioEvent::Step(_step, StepEvent::TimedOut)),
+            ) => {
+                state.any_step_timeouts = true;
             }
             CucumberEvent::Feature(
                 _feature,
@@ -85,10 +93,18 @@ fn user_defined_event_handlers_are_expressible() {
     steps.then("it's not okay", |_world, _step| {
         panic!("Intentionally panicking to fail the step")
     });
+    steps.then_async(
+        "it takes a long time",
+        t!(|world, _step| {
+            futures_timer::Delay::new(Duration::from_secs(9_000)).await;
+            world
+        }),
+    );
 
     let runner = Cucumber::with_handler(custom_handler.clone())
         .steps(steps)
-        .features(&["./features/integration"]);
+        .features(&["./features/integration"])
+        .step_timeout(Duration::from_secs(1));
 
     futures::executor::block_on(runner.run());
 
@@ -98,4 +114,5 @@ fn user_defined_event_handlers_are_expressible() {
     assert!(handler_state.any_step_unimplemented);
     assert!(handler_state.any_step_success);
     assert!(handler_state.any_scenario_skipped);
+    assert!(handler_state.any_step_timeouts);
 }
