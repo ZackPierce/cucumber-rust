@@ -61,15 +61,15 @@ impl<W: World> Runner<W> {
     }
 
     async fn run_step(self: Rc<Self>, step: Rc<gherkin::Step>, world: W) -> TestEvent<W> {
-        use std::io::prelude::*;
+        //use std::io::prelude::*;
 
         let func = match self.functions.resolve(&step) {
             Some(v) => v,
             None => return TestEvent::Unimplemented,
         };
 
-        let mut stdout = shh::stdout().unwrap();
-        let mut stderr = shh::stderr().unwrap();
+        //let mut stdout = shh::stdout().unwrap();
+        //let mut stderr = shh::stderr().unwrap();
 
         // This ugly mess here catches the panics from async calls.
         let panic_info = Arc::new(std::sync::Mutex::new(None));
@@ -93,19 +93,19 @@ impl<W: World> Runner<W> {
             TestFunction::Regex(f, r) => (f)(world, r, step).await,
         };
 
-        let mut out = String::new();
-        let mut err = String::new();
-        stdout.read_to_string(&mut out).unwrap_or_else(|_| {
-            out = "Error retrieving stdout".to_string();
-            0
-        });
-        stderr.read_to_string(&mut err).unwrap_or_else(|_| {
-            err = "Error retrieving stderr".to_string();
-            0
-        });
+        let out = String::new();
+        let err = String::new();
+        //stdout.read_to_string(&mut out).unwrap_or_else(|_| {
+        //    out = "Error retrieving stdout".to_string();
+        //    0
+        //});
+        //stderr.read_to_string(&mut err).unwrap_or_else(|_| {
+        //    err = "Error retrieving stderr".to_string();
+        //    0
+        //});
 
-        drop(stdout);
-        drop(stderr);
+        //drop(stdout);
+        //drop(stderr);
 
         let output = CapturedOutput { out, err };
         match result {
